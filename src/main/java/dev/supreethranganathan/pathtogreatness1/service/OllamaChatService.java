@@ -5,6 +5,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
+import reactor.core.publisher.Flux;
 
 import java.util.List;
 import java.util.Map;
@@ -18,9 +19,9 @@ public class OllamaChatService {
     @Value("${ollama.model}")
     private String model;
 
-    public String getOllamaResponse(ChatModel prompt) {
+    public Flux<String> getOllamaResponse(ChatModel prompt) {
         Map<String, Object> body = Map.of(
-                "model", "mistral:7b",   // or mistral:7b-q4 if that’s what you pulled
+                "model", "mistral",   // or mistral:7b-q4 if that’s what you pulled
                 "prompt", prompt.prompt()
         );
 
@@ -28,8 +29,7 @@ public class OllamaChatService {
                 .uri("/api/generate")    // ✅ correct Ollama endpoint
                 .bodyValue(body)
                 .retrieve()
-                .bodyToMono(String.class)
-                .block();
+                .bodyToFlux(String.class);
     }
 
 }

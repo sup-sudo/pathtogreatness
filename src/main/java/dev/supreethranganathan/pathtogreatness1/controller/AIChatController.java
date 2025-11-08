@@ -35,8 +35,8 @@ public class AIChatController {
         return aiChatService.streamChat(chatModel.prompt());
     }
 
-    @PostMapping("/ollama-static-chat")
-    public String askOllama(@RequestBody ChatModel chatModel) throws JsonProcessingException {
+    @PostMapping("/ollama-stream-chat")
+    public Flux<String> askOllama(@RequestBody ChatModel chatModel) throws JsonProcessingException {
 
         return ollamaChatService.getOllamaResponse(chatModel);
     }
