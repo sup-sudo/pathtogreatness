@@ -73,7 +73,7 @@ public class AIChatService {
                 "model", "gpt-4o-mini",
                 "stream", true,
                 "messages", List.of(
-                        Map.of("role", "system", "content", "You are a senior AI engineering assistant. Be concise and factual. If unsure, say you don't know."),
+//                        Map.of("role", "system", "content", "You are a senior AI engineering assistant. Be concise and factual. If unsure, say you don't know."),
                         Map.of("role", "user", "content", prompt)
                 )
         );

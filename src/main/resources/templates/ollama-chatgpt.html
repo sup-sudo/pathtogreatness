@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>🧠 Dual LLM Chat — Ollama vs ChatGPT</title>
+    <style>
+        body {
+          margin: 0;
+          font-family: 'Segoe UI', sans-serif;
+          background: #0d1117;
+          color: #c9d1d9;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          height: 100vh;
+          padding: 20px;
+        }
+
+        h1 {
+          color: #58a6ff;
+          margin-bottom: 15px;
+        }
+
+        .container {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 20px;
+          width: 95%;
+          max-width: 1200px;
+          flex: 1;
+        }
+
+        .chat-box {
+          background: #161b22;
+          border: 1px solid #30363d;
+          border-radius: 10px;
+          display: flex;
+          flex-direction: column;
+          padding: 10px;
+          overflow-y: auto;
+          min-height: 500px;
+        }
+
+        .chat-box h2 {
+          color: #ffa657;
+          margin: 0 0 10px 0;
+        }
+
+        .message {
+          background: #21262d;
+          margin: 5px 0;
+          padding: 8px 12px;
+          border-radius: 6px;
+          white-space: pre-wrap;
+        }
+
+        .input-container {
+          display: flex;
+          width: 95%;
+          max-width: 1200px;
+          margin-top: 15px;
+        }
+
+        input {
+          flex: 1;
+          padding: 10px;
+          border: none;
+          border-radius: 6px;
+          background: #161b22;
+          color: #c9d1d9;
+          border: 1px solid #30363d;
+        }
+
+        button {
+          margin-left: 10px;
+          padding: 10px 15px;
+          background: #238636;
+          border: none;
+          border-radius: 6px;
+          color: white;
+          cursor: pointer;
+          font-weight: bold;
+        }
+
+        button:hover {
+          background: #2ea043;
+        }
+    </style>
+</head>
+<body>
+<h1>🧠 Dual LLM Chat — Ollama vs ChatGPT</h1>
+
+<div class="container">
+    <div class="chat-box" id="ollamaBox">
+        <h2>💻 Ollama (Local)</h2>
+        <div id="ollamaOutput"></div>
+    </div>
+
+    <div class="chat-box" id="chatgptBox">
+        <h2>☁️ ChatGPT (Cloud)</h2>
+        <div id="chatgptOutput"></div>
+    </div>
+</div>
+
+<div class="input-container">
+    <input id="prompt" placeholder="Type your question once — both LLMs will answer..." />
+    <button onclick="sendToBoth()">Send</button>
+</div>
+<script>
+    async function sendToBoth() {
+      const prompt = document.getElementById('prompt').value.trim();
+      if (!prompt) return;
+      document.getElementById('prompt').value = '';
+
+      const ollamaOut = document.getElementById('ollamaOutput');
+      const chatgptOut = document.getElementById('chatgptOutput');
+      ollamaOut.innerHTML = '<div class="message"><b>💻 Thinking...</b></div>';
+      chatgptOut.innerHTML = '<div class="message"><b>☁️ Thinking...</b></div>';
+
+      streamResponse("http://localhost:7201/api/v1/ai-chat/ollama-stream-web", prompt, ollamaOut);
+      streamResponse("http://localhost:7201/api/v1/ai-chat/stream", prompt, chatgptOut);
+    }
+
+    async function streamResponse(url, prompt, outputElement) {
+  const response = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ prompt })
+  });
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+
+  let buffer = '';
+  let textBuffer = '';
+  let fullText = '';
+  const messageDiv = document.createElement('div');
+  messageDiv.className = "message";
+  outputElement.innerHTML = '';
+  outputElement.appendChild(messageDiv);
+
+  const interval = setInterval(() => {
+    if (textBuffer.length > 0) {
+      fullText += textBuffer.charAt(0);
+      textBuffer = textBuffer.slice(1);
+      messageDiv.textContent = fullText;
+      outputElement.scrollTop = outputElement.scrollHeight;
+    }
+  }, 15);
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+
+    buffer += decoder.decode(value, { stream: true });
+
+    // 🔹 Works for both OpenAI (SSE) and Ollama (raw JSONL)
+    const parts = buffer.split('\n');
+    buffer = parts.pop();
+
+    for (const part of parts) {
+      let clean = part.trim();
+
+      // Handle OpenAI SSE: "data: ..."
+      if (clean.startsWith('data:')) {
+        clean = clean.replace(/^data:\s*/, '');
+      }
+
+      // Handle Ollama: {"model":...,"response":"text",...}
+      try {
+        const json = JSON.parse(clean);
+        if (json.response) clean = json.response;
+      } catch (_) {
+        // ignore invalid JSON
+      }
+
+      if (clean && clean !== '[DONE]') {
+        textBuffer += clean + ' ';
+      }
+    }
+  }
+
+  if (buffer) {
+    try {
+      const json = JSON.parse(buffer);
+      if (json.response) textBuffer += json.response;
+    } catch (_) {}
+  }
+
+  const waitUntilDone = setInterval(() => {
+    if (textBuffer.length === 0) {
+      clearInterval(waitUntilDone);
+      clearInterval(interval);
+    }
+  }, 100);
+}
+</script>
+
+</body>
+</html>

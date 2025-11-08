@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Ollama Live Chat 🧠</title>
+    <style>
+        body {
+          font-family: monospace;
+          background: #0d1117;
+          color: #c9d1d9;
+          margin: 0;
+          padding: 20px;
+        }
+        h2 { color: #58a6ff; }
+        #output {
+          white-space: pre-wrap;
+          margin-top: 1rem;
+          background: #161b22;
+          padding: 1rem;
+          border-radius: 8px;
+          min-height: 200px;
+          border: 1px solid #30363d;
+          box-shadow: 0 0 10px rgba(88,166,255,0.1);
+        }
+        #input-container {
+          display: flex;
+          margin-top: 1rem;
+        }
+        input {
+          flex: 1;
+          background: #161b22;
+          border: 1px solid #30363d;
+          color: #c9d1d9;
+          padding: 10px;
+          border-radius: 5px;
+        }
+        button {
+          margin-left: 10px;
+          background: #238636;
+          color: white;
+          border: none;
+          padding: 10px 15px;
+          border-radius: 5px;
+          cursor: pointer;
+        }
+        button:hover {
+          background: #2ea043;
+        }
+    </style>
+</head>
+<body>
+<h2>🤖 Ollama Live Chat Stream</h2>
+<div id="output"></div>
+
+<div id="input-container">
+    <input id="prompt" placeholder="Ask something..." />
+    <button onclick="sendPrompt()">Send</button>
+</div>
+
+<script>
+    async function sendPrompt() {
+      const prompt = document.getElementById('prompt').value.trim();
+      if (!prompt) return;
+
+      const output = document.getElementById('output');
+      output.innerHTML = '';
+      document.getElementById('prompt').value = '';
+
+      const response = await fetch("http://localhost:7201/api/v1/ai-chat/ollama-stream-web", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt })
+      });
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        const chunk = decoder.decode(value);
+        output.innerHTML += chunk;
+        output.scrollTop = output.scrollHeight; // auto-scroll
+      }
+    }
+</script>
+</body>
+</html>

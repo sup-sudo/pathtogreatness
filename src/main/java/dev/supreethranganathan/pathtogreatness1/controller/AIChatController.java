@@ -36,9 +36,21 @@ public class AIChatController {
     }
 
     @PostMapping("/ollama-stream-chat")
-    public Flux<String> askOllama(@RequestBody ChatModel chatModel) throws JsonProcessingException {
-
+    public String askOllama(@RequestBody ChatModel chatModel) throws JsonProcessingException {
         return ollamaChatService.getOllamaResponse(chatModel);
     }
+
+    @PostMapping("/ollama-web")
+    public String askOllamaWeb(@RequestBody ChatModel chatModel) throws JsonProcessingException {
+        return ollamaChatService.askWithWeb(chatModel.prompt());
+    }
+
+    @PostMapping(value = "/ollama-stream-web", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public Flux<String> streamOllamaWeb(@RequestBody ChatModel chatModel) {
+        return ollamaChatService.getStreamingOllamaResponse(chatModel)
+                .map(chunk -> chunk + " ")
+                .concatWith(Flux.just("\n"));
+    }
+
 
 }

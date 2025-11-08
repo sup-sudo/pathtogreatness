@@ -19,8 +19,7 @@ public class WebClientConfig {
     @Value("${ollama.base-url}")
     private String ollamaBaseUrl;
 
-    @Bean
-    @Primary  // optional; remove if you already have a global one
+    @Bean(name = "ollamaWebClient")
     public WebClient ollamaWebClient() {
         return WebClient.builder()
                 .baseUrl(ollamaBaseUrl)
@@ -28,7 +27,7 @@ public class WebClientConfig {
                 .build();
     }
 
-    @Bean
+    @Bean(name = "openAiWebClient")
     public WebClient openAiWebClient() {
 
         return WebClient.builder()
